@@ -78,6 +78,12 @@
             <artifactId>kotlin-extensions</artifactId>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>com.diffplug.spotless</groupId>
+            <artifactId>spotless-maven-plugin</artifactId>
+            <version>2.43.0</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
     <build>
         <sourceDirectory>src/main/kotlin</sourceDirectory>
@@ -113,7 +119,6 @@
                 <configuration>
                     <systemPropertyVariables>
                         <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
-                        <maven.home>${maven.home}</maven.home>
                     </systemPropertyVariables>
                 </configuration>
             </plugin>
@@ -133,7 +138,6 @@
                         <native.image.path>${project.build.directory}/${project.build.finalName}-runner
                         </native.image.path>
                         <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
-                        <maven.home>${maven.home}</maven.home>
                     </systemPropertyVariables>
                 </configuration>
             </plugin>
@@ -180,6 +184,13 @@
                 <groupId>com.diffplug.spotless</groupId>
                 <artifactId>spotless-maven-plugin</artifactId>
                 <version>${spotless.version}</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                    </execution>
+                </executions>
                 <configuration>
                     <!-- optional: limit format enforcement to just the files changed by this feature branch -->
                     <ratchetFrom>origin/main</ratchetFrom>
@@ -201,22 +212,23 @@
                             </indent>
                         </format>
                     </formats>
-                    <ktlint>
-                        <version>1.0.0</version> <!-- optional -->
-                        <editorConfigOverride> <!-- optional -->
-                            <ij_kotlin_allow_trailing_comma>true</ij_kotlin_allow_trailing_comma>
-                            <ij_kotlin_allow_trailing_comma_on_call_site>true
-                            </ij_kotlin_allow_trailing_comma_on_call_site>
-                        </editorConfigOverride>
-                        <customRuleSets> <!-- optional -->
-                            <value>io.nlopez.compose.rules:ktlint:0.3.3</value>
-                        </customRuleSets>
-                    </ktlint>
-                    <diktat>
-                        <version>1.0.1</version> <!-- optional -->
-                        <configFile>full/path/to/diktat-analysis.yml
-                        </configFile> <!-- optional, configuration file path -->
-                    </diktat>
+                    <kotlin>
+                        <ktlint>
+                            <version>1.0.0</version> <!-- optional -->
+                            <editorConfigOverride> <!-- optional -->
+                                <ij_kotlin_allow_trailing_comma>true</ij_kotlin_allow_trailing_comma>
+                                <ij_kotlin_allow_trailing_comma_on_call_site>true
+                                </ij_kotlin_allow_trailing_comma_on_call_site>
+                            </editorConfigOverride>
+                            <customRuleSets> <!-- optional -->
+                                <value>io.nlopez.compose.rules:ktlint:0.3.3</value>
+                            </customRuleSets>
+                        </ktlint>
+                        <diktat>
+                            <version>2.0.0</version> <!-- optional -->
+                            <configFile>./diktat-analysis.yml</configFile> <!-- optional, configuration file path -->
+                        </diktat>
+                    </kotlin>
                 </configuration>
             </plugin>
         </plugins>
