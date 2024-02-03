@@ -1,0 +1,32 @@
+iexcloud:
+  token: pk_2a3817ebf40e458e9d5fa9471bea3b6c
+
+quarkus:
+  log:
+    level: INFO
+  datasource:
+    db-kind: postgresql
+    username: postgres
+    password: password
+    reactive:
+      url: postgresql://localhost:5432/iexcloud
+      max-size: 20
+  hibernate-orm:
+    database:
+      generation: update
+  rest-client:
+    logging:
+      scope: all
+      body-limit: 50
+    iexcloud:
+      uri: https://cloud.iexapis.com/stable
+
+kafka:
+  bootstrap:
+    servers: localhost:9093
+
+mp:
+  messaging:
+    outgoing:
+    incoming:
+
