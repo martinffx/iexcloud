@@ -2,7 +2,6 @@ package me.martinrichards.repo
 
 import io.quarkus.hibernate.reactive.panache.PanacheRepository
 import io.quarkus.hibernate.reactive.panache.common.WithSessionOnDemand
-import io.quarkus.hibernate.reactive.panache.common.WithTransaction
 import io.quarkus.kafka.client.serialization.JsonbDeserializer
 import io.smallrye.mutiny.Uni
 import jakarta.enterprise.context.ApplicationScoped
@@ -127,16 +126,14 @@ class IEXSymbolRepo : PanacheRepository<Symbol> {
         return list("from symbols where symbols.exchange.code = ?1", code)
     }
 
-    @WithTransaction
+    @WithSessionOnDemand
     fun upsert(
         exchangeEntity: ExchangeEntity,
         iexSymbol: IEXSymbol,
     ): Uni<Symbol> {
         return this.findByCode(iexSymbol.symbol).flatMap { entity ->
             val symbol =
-                entity?.let {
-                    it.update(iexSymbol)
-                } ?: Symbol(exchangeEntity, iexSymbol)
+                entity?.update(iexSymbol) ?: Symbol(exchangeEntity, iexSymbol)
             this.persist(symbol)
         }
     }

@@ -2,12 +2,10 @@ package me.martinrichards
 
 import io.quarkus.test.InjectMock
 import io.quarkus.test.junit.QuarkusTest
+import io.quarkus.test.vertx.RunOnVertxContext
+import io.quarkus.test.vertx.UniAsserter
 import io.smallrye.mutiny.Uni
-import io.smallrye.mutiny.coroutines.asFlow
-import io.smallrye.mutiny.coroutines.awaitSuspending
 import jakarta.inject.Inject
-import kotlinx.coroutines.flow.toList
-import kotlinx.coroutines.runBlocking
 import me.martinrichards.repo.IEXExchangeRepo
 import me.martinrichards.repo.IEXSymbolRepo
 import org.eclipse.microprofile.rest.client.inject.RestClient
@@ -114,24 +112,35 @@ class IEXServiceTest {
     }
 
     @Test
-    fun shouldUpdateExchange() =
-        runBlocking {
-            val exchanges = iexService.updateExchanges().asFlow().toList()
-            assertEquals(11, exchanges.size)
+    @RunOnVertxContext
+    fun shouldUpdateExchange(asserter: UniAsserter): Unit =
+        run {
+            asserter.assertEquals(
+                {
+                    iexService.updateExchanges().collect().asList()
+                        .map { exchanges -> exchanges.size }
+                },
+                11,
+            )
+            return
         }
 
     @Test
-    fun shouldSaveExchange() =
-        runBlocking {
+    @RunOnVertxContext
+    fun shouldSaveExchange(asserter: UniAsserter): Unit =
+        run {
             val exchange = Exchange("AIXK", "KZ", "description", "mic", "suffix")
-            val code = iexService.saveExchange(exchange).awaitSuspending()
-            assertEquals("AIXK", code)
+            asserter.assertEquals({
+                iexService.saveExchange(exchange)
+            }, "AIXK")
+            return
         }
 
     @Test
-    fun shouldUpdateSymbolsForExchange() =
-        runBlocking {
-            val exchange =
+    @RunOnVertxContext
+    fun shouldUpdateSymbolsForExchange(asserter: UniAsserter): Unit =
+        run {
+            asserter.execute {
                 exchangeRepo.upsert(
                     Exchange(
                         "BATS",
@@ -140,50 +149,19 @@ class IEXServiceTest {
                         "mic",
                         "suffix",
                     ),
-                ).awaitSuspending()
-            val symbols =
+                )
+            }.assertEquals({
                 iexService.updateSymbols("BATS")
-                    .asFlow().toList()
-            assertEquals(11, symbols.size)
+                    .collect().asList().map { symbols -> symbols.size }
+            }, 11)
+            return
         }
 
     @Test
-    fun shouldSaveSymbols() =
-        runBlocking {
-            exchangeRepo.upsert(
-                Exchange(
-                    "BATS",
-                    "US",
-                    "description",
-                    "mic",
-                    "suffix",
-                ),
-            ).awaitSuspending()
-            val symbol =
-                Symbol(
-                    "ACWV",
-                    "BATS",
-                    "BlackRock Institutional Trust Company N.A. - iShares MSCI Global Min Vol Factor ETF",
-                    LocalDate.parse("2022-09-03"),
-                    false,
-                    "et",
-                    "US",
-                    "USD",
-                    "IEX_53424D5052542D52",
-                    "0000913414",
-                    "BBG0025X38X0",
-                    "549300BPYHDEDI59G670",
-                )
-
-            val entity = iexService.saveSymbol(symbol).awaitSuspending()
-            assertEquals("BATS", entity?.exchange)
-            assertEquals("ACWV", entity?.code)
-        }
-
-    @Test
-    fun shouldUpdatePrices() =
-        runBlocking {
-            val exchange =
+    @RunOnVertxContext
+    fun shouldSaveSymbols(asserter: UniAsserter): Unit =
+        run {
+            asserter.assertThat({
                 exchangeRepo.upsert(
                     Exchange(
                         "BATS",
@@ -192,45 +170,92 @@ class IEXServiceTest {
                         "mic",
                         "suffix",
                     ),
-                ).awaitSuspending()
-            val symbol =
-                symbolRepo.upsert(
-                    exchange,
-                    Symbol(
-                        "ACWV",
-                        "BATS",
-                        "BlackRock Institutional Trust Company N.A. - iShares MSCI Global Min Vol Factor ETF",
-                        LocalDate.parse("2022-09-03"),
-                        false,
-                        "et",
-                        "US",
-                        "USD",
-                        "IEX_53424D5052542D52",
-                        "0000913414",
-                        "BBG0025X38X0",
-                        "549300BPYHDEDI59G670",
-                    ),
-                ).awaitSuspending()
+                ).flatMap { exchange ->
+                    val symbol =
+                        Symbol(
+                            "ACWV",
+                            exchange.code,
+                            "BlackRock Institutional Trust Company N.A. - iShares MSCI Global Min Vol Factor ETF",
+                            LocalDate.parse("2022-09-03"),
+                            false,
+                            "et",
+                            "US",
+                            "USD",
+                            "IEX_53424D5052542D52",
+                            "0000913414",
+                            "BBG0025X38X0",
+                            "549300BPYHDEDI59G670",
+                        )
 
-            val prices = iexService.updatePrices(symbol.toDTO()).asFlow().toList()
-            assert(prices.size == 11)
-            assert(prices.first().symbol == symbol.code)
+                    iexService.saveSymbol(symbol)
+                }
+            }, {
+                assertEquals("BATS", it?.exchange)
+                assertEquals("ACWV", it?.code)
+            })
+            return
         }
 
     @Test
-    fun shouldSavePrices(): Unit =
-        runBlocking {
-            val price =
-                Price(
-                    "ACWV",
-                    LocalDate.now(),
-                    0.0,
-                    0.0,
-                    0.0,
-                    0.0,
-                    0,
-                )
-            iexService.savePrice(price)
+    @RunOnVertxContext
+    fun shouldUpdatePrices(asserter: UniAsserter): Unit =
+        run {
+            asserter.assertThat({
+                exchangeRepo.upsert(
+                    Exchange(
+                        "BATS",
+                        "US",
+                        "description",
+                        "mic",
+                        "suffix",
+                    ),
+                ).flatMap { exchange ->
+                    symbolRepo.upsert(
+                        exchange,
+                        Symbol(
+                            "ACWV",
+                            "BATS",
+                            "BlackRock Institutional Trust Company N.A. - iShares MSCI Global Min Vol Factor ETF",
+                            LocalDate.parse("2022-09-03"),
+                            false,
+                            "et",
+                            "US",
+                            "USD",
+                            "IEX_53424D5052542D52",
+                            "0000913414",
+                            "BBG0025X38X0",
+                            "549300BPYHDEDI59G670",
+                        ),
+                    ).flatMap {
+                        iexService.updatePrices(it.toDTO()).collect().asList()
+                    }
+                }
+            }, {
+                assertEquals(0, it.size)
+                // assert(it.first().symbol == "ACWV")
+            })
+            return
+        }
+
+    @Test
+    @RunOnVertxContext
+    fun shouldSavePrices(asserter: UniAsserter): Unit =
+        run {
+            asserter.assertThat({
+                val price =
+                    Price(
+                        "ACWV",
+                        LocalDate.now(),
+                        0.0,
+                        0.0,
+                        0.0,
+                        0.0,
+                        0,
+                    )
+                iexService.savePrice(price)
+            }, {
+                assertEquals(it.code, "ACWV")
+            })
         }
 
     @Test

@@ -57,9 +57,11 @@ class IEXService(
             .findByCode(symbol.exchange)
             .flatMap {
                 it?.let {
-                    this.symbolRepo.persist(Symbol(it, symbol))
+                    this.symbolRepo.upsert(it, symbol)
                 }
-            }.map { it?.toDTO() }
+            }.map {
+                it?.toDTO()
+            }
     }
 
     @Merge
@@ -71,10 +73,15 @@ class IEXService(
             .onItem()
             .transformToMulti { lastPrice ->
                 val range = calculateRange(lastPrice)
+                println("code: ${symbol.code}")
+                println("range: $range")
                 this.iexClient
                     .listRangePrices(symbol.code, range.name, this.token)
                     .onItem()
-                    .transformToMulti { prices -> Multi.createFrom().iterable(prices) }
+                    .transformToMulti { prices ->
+                        println(prices.size)
+                        Multi.createFrom().iterable(prices)
+                    }
             }
     }
 

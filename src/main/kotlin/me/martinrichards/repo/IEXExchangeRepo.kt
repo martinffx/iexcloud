@@ -2,7 +2,6 @@ package me.martinrichards.repo
 
 import io.quarkus.hibernate.reactive.panache.PanacheRepository
 import io.quarkus.hibernate.reactive.panache.common.WithSessionOnDemand
-import io.quarkus.hibernate.reactive.panache.common.WithTransaction
 import io.smallrye.mutiny.Uni
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.persistence.Column
@@ -95,7 +94,7 @@ class IEXExchangeRepo : PanacheRepository<ExchangeEntity> {
         return listAll().map { it.toList() }
     }
 
-    @WithTransaction
+    @WithSessionOnDemand
     fun upsert(iexExchange: IEXExchange): Uni<ExchangeEntity> {
         return this.findByCode(iexExchange.exchange).flatMap { entity ->
             val exchangeEntity =
